@@ -102,6 +102,27 @@ void handle_mov_reg_rm(FILE *f, char *instr) {
   }
 }
 
+void handle_mov_immediate(FILE *f, char *instr) {
+  char w = instr[4], reg[4];
+
+  strncpy(reg, instr + 5, 3);
+
+  int b1 = fgetc(f);
+  unsigned int disp8l = b1 & 0xFF;
+
+  if (w == '1') {
+    int b2 = fgetc(f);
+    unsigned int disp8h = b2 & 0xFF;
+    unsigned int disp16 = (disp8h << 8) | disp8l;
+
+    printf("mov ");
+    printf("%s, %d\n", get_reg(reg, w), disp16);
+  } else {
+    printf("mov ");
+    printf("%s, %d\n", get_reg(reg, w), disp8l);
+  }
+}
+
 int main(int argc, char **argv) {
   if (argc != 2) {
     printf("You must provide an binary to disassemble!\n");
@@ -123,17 +144,19 @@ int main(int argc, char **argv) {
   rewind(f);
   printf("bits 16\n\n");
 
-  while (fi < size) {
-    char instruction[8], prefix[7];
+  while (fi <= size) {
+    char instruction[8], prefix[5];
     int c = fgetc(f);
 
     readinstruction(instruction, c);
-    strncpy(prefix, instruction, 6);
+    strncpy(prefix, instruction, 4);
 
-    if (strcmp(prefix, "100010") == 0) {
+    if (strcmp(prefix, "1000") == 0)
       handle_mov_reg_rm(f, instruction);
-    } else
-      continue;
+    else if (strcmp(prefix, "1011") == 0)
+      handle_mov_immediate(f, instruction);
+    else
+      break;
   }
 
   fclose(f);
