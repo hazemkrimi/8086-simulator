@@ -2,51 +2,116 @@
 #include <stdlib.h>
 #include <string.h>
 
-char binchar(int n) {
-  if (n)
-    return '1';
+#include "utils.h"
 
-  return '0';
-}
+void handle_mov_reg_rm(FILE *f, char *instr) {
+  char mod[3], reg[4], rm[4];
 
-char *getregname(char *r, int w) {
-  if (strcmp(r, "000") == 0)
-    return w == 1 ? "ax" : "al";
+  int c = fgetc(f);
 
-  if (strcmp(r, "001") == 0)
-    return w == 1 ? "cx" : "cl";
+  for (int i = 0; i <= 7; ++i) {
+    int b = c & (1 << i);
 
-  if (strcmp(r, "010") == 0)
-    return w == 1 ? "dx" : "dl";
+    if (i >= 0 && i < 3) {
+      rm[abs(i - 2)] = binchar(b);
+      continue;
+    }
 
-  if (strcmp(r, "011") == 0)
-    return w == 1 ? "bx" : "bl";
+    if (i >= 3 && i < 6) {
+      reg[abs(i - 5)] = binchar(b);
+      continue;
+    }
 
-  if (strcmp(r, "100") == 0)
-    return w == 1 ? "sp" : "ah";
+    if (i > 5) {
+      mod[abs(i - 7)] = binchar(b);
+      continue;
+    }
+  }
 
-  if (strcmp(r, "101") == 0)
-    return w == 1 ? "bp" : "ch";
+  mod[2] = '\0';
+  reg[3] = '\0';
+  rm[3] = '\0';
 
-  if (strcmp(r, "110") == 0)
-    return w == 1 ? "si" : "dh";
+  if (strcmp(mod, "00") == 0) {
+    printf("mov ");
 
-  if (strcmp(r, "111") == 0)
-    return w == 1 ? "di" : "bh";
+    if (instr[6] == '1') {
+      printf("%s, [%s]\n", get_reg(reg, instr[7]), get_rm(rm));
+    } else {
+      printf("[%s], %s\n", get_rm(rm), get_reg(reg, instr[7]));
+    }
 
-  return "";
+    return;
+  }
+
+  if (strcmp(mod, "01") == 0) {
+    printf("mov ");
+
+    int b = fgetc(f);
+    unsigned int disp8 = b & 0xFF;
+
+    if (instr[6] == '1') {
+      if (disp8)
+        printf("%s, [%s + %d]\n", get_reg(reg, instr[7]), get_rm(rm), disp8);
+      else
+        printf("%s, [%s]\n", get_reg(reg, instr[7]), get_rm(rm));
+    } else {
+      if (disp8)
+        printf("[%s + %d], %s\n", get_rm(rm), disp8, get_reg(reg, instr[7]));
+      else
+        printf("[%s], %s\n", get_rm(rm), get_reg(reg, instr[7]));
+    }
+
+    return;
+  }
+
+  if (strcmp(mod, "10") == 0) {
+    printf("mov ");
+
+    int b1 = fgetc(f);
+    int b2 = fgetc(f);
+    unsigned int disp8l = b1 & 0xFF;
+    unsigned int disp8h = b2 & 0xFF;
+    unsigned int disp16 = (disp8h << 8) | disp8l;
+
+    if (instr[6] == '1') {
+      if (disp16)
+        printf("%s, [%s + %d]\n", get_reg(reg, instr[7]), get_rm(rm), disp16);
+      else
+        printf("%s, [%s]\n", get_reg(reg, instr[7]), get_rm(rm));
+    } else {
+      if (disp16)
+        printf("[%s + %d], %s\n", get_rm(rm), disp16, get_reg(reg, instr[7]));
+      else
+        printf("[%s], %s\n", get_rm(rm), get_reg(reg, instr[7]));
+    }
+
+    return;
+  }
+
+  if (strcmp(mod, "11") == 0) {
+    printf("mov ");
+
+    if (instr[6] == '1') {
+      printf("%s, %s\n", get_reg(reg, instr[7]), get_reg(rm, instr[7]));
+    } else {
+      printf("%s, %s\n", get_reg(rm, instr[7]), get_reg(reg, instr[7]));
+    }
+
+    return;
+  }
 }
 
 int main(int argc, char **argv) {
   if (argc != 2) {
-    printf("You must provide an binary to disassemble!");
+    printf("You must provide an binary to disassemble!\n");
     exit(1);
   }
 
   FILE *f = fopen(argv[1], "rb");
 
   if (f == NULL) {
-    printf("Error opening file!");
+    printf("Error opening file!\n");
     exit(1);
   }
 
@@ -56,74 +121,19 @@ int main(int argc, char **argv) {
   int fi = 0;
 
   rewind(f);
+  printf("bits 16\n\n");
 
   while (fi < size) {
-    int b, c, d, w;
-    char instruction[6];
+    char instruction[8], prefix[7];
+    int c = fgetc(f);
 
-    c = fgetc(f);
+    readinstruction(instruction, c);
+    strncpy(prefix, instruction, 6);
 
-    for (int i = 0; i <= 7; ++i) {
-      b = c & (1 << i);
-
-      if (i == 0) {
-        w = b ? 1 : 0;
-        continue;
-      }
-
-      if (i == 1) {
-        d = b ? 1 : 0;
-        continue;
-      }
-
-      if (i > 1 && i <= 7) {
-        instruction[abs(i - 7)] = binchar(b);
-        continue;
-      }
-    }
-
-    char mod[3], reg[4], rm[4];
-
-    c = fgetc(f);
-
-    for (int i = 0; i <= 7; ++i) {
-      b = c & (1 << i);
-
-      if (i >= 0 && i < 3) {
-        rm[abs(i - 2)] = binchar(b);
-        continue;
-      }
-
-      if (i >= 3 && i < 6) {
-        reg[abs(i - 5)] = binchar(b);
-        continue;
-      }
-
-      if (i > 5) {
-        mod[abs(i - 7)] = binchar(b);
-        continue;
-      }
-    }
-
-    mod[2] = '\0';
-    reg[3] = '\0';
-    rm[3] = '\0';
-
-    if (strcmp(mod, "11") == 0) {
-      if (strcmp(instruction, "100010") == 0)
-        printf("mov ");
-
-      char *reg_text = getregname(reg, w);
-      char *rm_text = getregname(rm, w);
-
-      if (d == 1) {
-        printf("%s, %s\n", reg_text, rm_text);
-      } else {
-        printf("%s, %s\n", rm_text, reg_text);
-      }
-    }
-
-    fi += 2;
+    if (strcmp(prefix, "100010") == 0) {
+      handle_mov_reg_rm(f, instruction);
+    } else
+      continue;
   }
 
   fclose(f);
