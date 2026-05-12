@@ -1,7 +1,8 @@
+#include "utils.h"
 #include <stdlib.h>
 #include <string.h>
 
-char binchar(int n) {
+char binary_to_char(int n) {
   if (n)
     return '1';
 
@@ -64,9 +65,9 @@ char *get_rm(char *r) {
   return "";
 }
 
-void readinstruction(char *instruction, int byte) {
+void read_opcode(char *opcode, int byte) {
   for (int i = 0; i <= 7; ++i) {
     int b = byte & (1 << i);
-    instruction[abs(i - 7)] = binchar(b);
+    opcode[abs(i - 7)] = binary_to_char(b);
   }
 }

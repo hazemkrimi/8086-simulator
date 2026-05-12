@@ -2,7 +2,7 @@
 
 char *get_reg(char *, char);
 char *get_rm(char *);
-void readinstruction(char *, int);
-char binchar(int);
+void read_opcode(char *, int);
+char binary_to_char(int);
 
 #endif
