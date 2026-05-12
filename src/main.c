@@ -4,6 +4,13 @@
 
 #include "utils.h"
 
+void handle_jmp_instr(FILE *f, char *instr) {
+  int b = fgetc(f);
+  int inc = b & 0xFF;
+
+  printf("%s %d\n", instr, inc);
+}
+
 void handle_instr_reg_mem(FILE *f, char *opcode, char *instr) {
   char mod[3], reg[4], rm[4];
   char d = opcode[6], w = opcode[7];
@@ -33,10 +40,25 @@ void handle_instr_reg_mem(FILE *f, char *opcode, char *instr) {
   rm[3] = '\0';
 
   if (strcmp(mod, "00") == 0) {
+    int disp = 0;
+    unsigned int disp16;
+    char strdisp16[17];
+
+    if (strcmp(rm, "110") == 0) {
+      int b = fgetc(f);
+      unsigned int disp8l = b & 0xFF;
+      int b1 = fgetc(f);
+      unsigned int disp8h = b1 & 0xFF;
+
+      disp16 = (disp8h << 8) | disp8l;
+      disp = 1;
+      sprintf(strdisp16, "%d", disp16);
+    }
+
     if (d == '1') {
-      printf("%s %s, [%s]\n", instr, get_reg(reg, w), get_rm(rm));
+      printf("%s %s, [%s]\n", instr, get_reg(reg, w), disp ? strdisp16 : get_rm(rm));
     } else {
-      printf("%s [%s], %s\n", instr, get_rm(rm), get_reg(reg, w));
+      printf("%s [%s], %s\n", instr, disp ? strdisp16 : get_rm(rm), get_reg(reg, w));
     }
 
     return;
@@ -163,18 +185,33 @@ void handle_instr_immediate_reg_mem(FILE *f, char *opcode, int mov) {
   }
 
   if (strcmp(mod, "00") == 0) {
-    int b1 = fgetc(f);
-    unsigned int data8l = b1 & 0xFF;
+    int disp = 0;
+    unsigned int disp16;
+    char strdisp16[17];
+
+    if (strcmp(rm, "110") == 0) {
+      int b = fgetc(f);
+      unsigned int disp8l = b & 0xFF;
+      int b1 = fgetc(f);
+      unsigned int disp8h = b1 & 0xFF;
+
+      disp16 = (disp8h << 8) | disp8l;
+      disp = 1;
+      sprintf(strdisp16, "%d", disp16);
+    }
+
+    int b = fgetc(f);
+    unsigned int data8l = b & 0xFF;
 
     if ((mov || s == '0') && w == '1') {
-      int b2 = fgetc(f);
-      unsigned int data8h = b2 & 0xFF;
+      int b1 = fgetc(f);
+      unsigned int data8h = b1 & 0xFF;
       unsigned int data16 = (data8h << 8) | data8l;
 
-      printf("%s %s [%s], %d\n", instr, w == '1' ? "word" : "byte", get_rm(rm),
+      printf("%s %s [%s], %d\n", instr, w == '1' ? "word" : "byte", disp ? strdisp16 : get_rm(rm),
              data16);
     } else {
-      printf("%s %s [%s], %d\n", instr, w == '1' ? "word" : "byte", get_rm(rm),
+      printf("%s %s [%s], %d\n", instr, w == '1' ? "word" : "byte", disp ? strdisp16 : get_rm(rm),
              data8l);
     }
 
@@ -327,6 +364,66 @@ int main(int argc, char **argv) {
 
     else if (strcmp(prefix, "0011") == 0 && opcode[5] == '1')
       handle_instr_immediate_reg_acc(f, opcode, "cmp");
+
+    else if (strcmp(opcode, "01110101") == 0)
+      handle_jmp_instr(f, "jnz");
+
+    else if (strcmp(opcode, "01110100") == 0)
+      handle_jmp_instr(f, "je");
+
+    else if (strcmp(opcode, "01111100") == 0)
+      handle_jmp_instr(f, "jl");
+
+    else if (strcmp(opcode, "01111110") == 0)
+      handle_jmp_instr(f, "jle");
+
+    else if (strcmp(opcode, "01110010") == 0)
+      handle_jmp_instr(f, "jb");
+
+    else if (strcmp(opcode, "01110110") == 0)
+      handle_jmp_instr(f, "jbe");
+
+    else if (strcmp(opcode, "01111010") == 0)
+      handle_jmp_instr(f, "jp");
+
+    else if (strcmp(opcode, "01110000") == 0)
+      handle_jmp_instr(f, "jo");
+
+    else if (strcmp(opcode, "01111000") == 0)
+      handle_jmp_instr(f, "js");
+
+    else if (strcmp(opcode, "01111101") == 0)
+      handle_jmp_instr(f, "jnl");
+
+    else if (strcmp(opcode, "01111111") == 0)
+      handle_jmp_instr(f, "jg");
+
+    else if (strcmp(opcode, "01110011") == 0)
+      handle_jmp_instr(f, "jnb");
+
+    else if (strcmp(opcode, "01110111") == 0)
+      handle_jmp_instr(f, "ja");
+
+    else if (strcmp(opcode, "01111011") == 0)
+      handle_jmp_instr(f, "jnp");
+
+    else if (strcmp(opcode, "01110001") == 0)
+      handle_jmp_instr(f, "jno");
+
+    else if (strcmp(opcode, "01111001") == 0)
+      handle_jmp_instr(f, "jns");
+
+    else if (strcmp(opcode, "11100010") == 0)
+      handle_jmp_instr(f, "loop");
+
+    else if (strcmp(opcode, "11100001") == 0)
+      handle_jmp_instr(f, "loopz");
+
+    else if (strcmp(opcode, "11100000") == 0)
+      handle_jmp_instr(f, "loopnz");
+
+    else if (strcmp(opcode, "11100011") == 0)
+      handle_jmp_instr(f, "jcxz");
 
     else {
       break;
