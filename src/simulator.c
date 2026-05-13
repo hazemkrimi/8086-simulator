@@ -5,8 +5,8 @@
 
 #include "utils.h"
 
-void simulate(char *oper, int16_t registers[8], int *ip, int *zero_flag,
-              int *signed_flag, char *instr) {
+void simulate(char *oper, int16_t registers[8], int16_t memory[65536], int *ip,
+              int *zero_flag, int *signed_flag, char *instr) {
   char kind[10], operand1[10], operand2[10];
   int16_t value;
 

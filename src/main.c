@@ -34,6 +34,10 @@ int main(int argc, char **argv) {
   fclose(f);
 
   int16_t registers[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+  int16_t memory[65536];
+
+  for (int i = 0; i < 65536; ++i)
+    memory[i] = 0;
 
   while (ip < length) {
     char opcode[8], prefix[5];
@@ -135,7 +139,7 @@ int main(int argc, char **argv) {
     else if (strcmp(opcode, "11100011") == 0)
       decode_jmp_instr(instr, buf, &ip, "jcxz");
 
-    simulate(oper, registers, &ip, &zero_flag, &signed_flag, instr);
+    simulate(oper, registers, memory, &ip, &zero_flag, &signed_flag, instr);
     printf("%s ; %s\n", instr, oper);
   }
 
