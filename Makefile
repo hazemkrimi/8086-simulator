@@ -1,10 +1,10 @@
 CC = gcc
-TARGET_NAME = disassembler
+TARGET_NAME = simulator
 CFLAGS = -g -Wall -Wextra -DDEBUG
 OUT_DIR = out
 TARGET = $(OUT_DIR)/$(TARGET_NAME)
 
-SRCS = src/utils.c src/main.c
+SRCS = src/utils.c src/decoder.c src/main.c
 OBJS = $(SRCS:src/%.c=$(OUT_DIR)/%.o)
 
 $(TARGET): $(OBJS)
