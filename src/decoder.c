@@ -4,14 +4,14 @@
 
 #include "utils.h"
 
-void handle_jmp_instr(FILE *f, char *instr) {
+void decode_jmp_instr(char *result, FILE *f, char *instr) {
   int b = fgetc(f);
   int inc = b & 0xFF;
 
-  printf("%s %d\n", instr, inc);
+  sprintf(result, "%s %d", instr, inc);
 }
 
-void handle_instr_reg_mem(FILE *f, char *opcode, char *instr) {
+void decode_instr_reg_mem(char *result, FILE *f, char *opcode, char *instr) {
   char mod[3], reg[4], rm[4];
   char d = opcode[6], w = opcode[7];
   int c = fgetc(f);
@@ -56,34 +56,30 @@ void handle_instr_reg_mem(FILE *f, char *opcode, char *instr) {
     }
 
     if (d == '1') {
-      printf("%s %s, [%s]\n", instr, get_reg(reg, w), disp ? strdisp16 : get_rm(rm));
+      sprintf(result, "%s %s, [%s]", instr, get_reg(reg, w),
+              disp ? strdisp16 : get_rm(rm));
     } else {
-      printf("%s [%s], %s\n", instr, disp ? strdisp16 : get_rm(rm), get_reg(reg, w));
+      sprintf(result, "%s [%s], %s", instr, disp ? strdisp16 : get_rm(rm),
+              get_reg(reg, w));
     }
-
-    return;
-  }
-
-  if (strcmp(mod, "01") == 0) {
+  } else if (strcmp(mod, "01") == 0) {
     int b = fgetc(f);
     unsigned int disp8 = b & 0xFF;
 
     if (d == '1') {
       if (disp8)
-        printf("%s %s, [%s + %d]\n", instr, get_reg(reg, w), get_rm(rm), disp8);
+        sprintf(result, "%s %s, [%s + %d]", instr, get_reg(reg, w),
+                get_rm(rm), disp8);
       else
-        printf("%s %s, [%s]\n", instr, get_reg(reg, w), get_rm(rm));
+        sprintf(result, "%s %s, [%s]", instr, get_reg(reg, w), get_rm(rm));
     } else {
       if (disp8)
-        printf("%s [%s + %d], %s\n", instr, get_rm(rm), disp8, get_reg(reg, w));
+        sprintf(result, "%s [%s + %d], %s", instr, get_rm(rm), disp8,
+                get_reg(reg, w));
       else
-        printf("%s [%s], %s\n", instr, get_rm(rm), get_reg(reg, w));
+        sprintf(result, "%s [%s], %s", instr, get_rm(rm), get_reg(reg, w));
     }
-
-    return;
-  }
-
-  if (strcmp(mod, "10") == 0) {
+  } else if (strcmp(mod, "10") == 0) {
     int b1 = fgetc(f);
     int b2 = fgetc(f);
     unsigned int disp8l = b1 & 0xFF;
@@ -92,33 +88,28 @@ void handle_instr_reg_mem(FILE *f, char *opcode, char *instr) {
 
     if (d == '1') {
       if (disp16)
-        printf("%s %s, [%s + %d]\n", instr, get_reg(reg, w), get_rm(rm),
-               disp16);
+        sprintf(result, "%s %s, [%s + %d]", instr, get_reg(reg, w),
+                get_rm(rm), disp16);
       else
-        printf("%s %s, [%s]\n", instr, get_reg(reg, w), get_rm(rm));
+        sprintf(result, "%s %s, [%s]", instr, get_reg(reg, w), get_rm(rm));
     } else {
       if (disp16)
-        printf("%s [%s + %d], %s\n", instr, get_rm(rm), disp16,
-               get_reg(reg, w));
+        sprintf(result, "%s [%s + %d], %s", instr, get_rm(rm), disp16,
+                get_reg(reg, w));
       else
-        printf("%s [%s], %s\n", instr, get_rm(rm), get_reg(reg, w));
+        sprintf(result, "%s [%s], %s", instr, get_rm(rm), get_reg(reg, w));
     }
-
-    return;
-  }
-
-  if (strcmp(mod, "11") == 0) {
+  } else if (strcmp(mod, "11") == 0) {
     if (d == '1') {
-      printf("%s %s, %s\n", instr, get_reg(reg, w), get_reg(rm, w));
+      sprintf(result, "%s %s, %s", instr, get_reg(reg, w), get_reg(rm, w));
     } else {
-      printf("%s %s, %s\n", instr, get_reg(rm, w), get_reg(reg, w));
+      sprintf(result, "%s %s, %s", instr, get_reg(rm, w), get_reg(reg, w));
     }
-
-    return;
   }
 }
 
-void handle_instr_immediate_reg_acc(FILE *f, char *opcode, char *instr) {
+void decode_instr_immediate_reg_acc(char *result, FILE *f, char *opcode,
+                                    char *instr) {
   char w, reg[4];
 
   if (strcmp(instr, "mov") == 0) {
@@ -136,15 +127,16 @@ void handle_instr_immediate_reg_acc(FILE *f, char *opcode, char *instr) {
     unsigned int data8h = b2 & 0xFF;
     unsigned int data16 = (data8h << 8) | data8l;
 
-    printf("%s %s, %d\n", instr,
-           get_reg(strcmp(instr, "mov") == 0 ? reg : "000", w), data16);
+    sprintf(result, "%s %s, %d", instr,
+            get_reg(strcmp(instr, "mov") == 0 ? reg : "000", w), data16);
   } else {
-    printf("%s %s, %d\n", instr,
-           get_reg(strcmp(instr, "mov") == 0 ? reg : "000", w), data8l);
+    sprintf(result, "%s %s, %d", instr,
+            get_reg(strcmp(instr, "mov") == 0 ? reg : "000", w), data8l);
   }
 }
 
-void handle_instr_immediate_reg_mem(FILE *f, char *opcode, int mov) {
+void decode_instr_immediate_reg_mem(char *result, FILE *f, char *opcode,
+                                    int mov) {
   char mod[3], reg[4], rm[4], *instr;
   char s = opcode[6], w = opcode[7];
   int c = fgetc(f);
@@ -172,17 +164,16 @@ void handle_instr_immediate_reg_mem(FILE *f, char *opcode, int mov) {
   reg[3] = '\0';
   rm[3] = '\0';
 
-  if (mov) {
+  if (mov)
     instr = "mov";
-  } else if (strcmp(reg, "000") == 0) {
+  else if (strcmp(reg, "000") == 0)
     instr = "add";
-  } else if (strcmp(reg, "101") == 0) {
+  else if (strcmp(reg, "101") == 0)
     instr = "sub";
-  } else if (strcmp(reg, "111") == 0) {
+  else if (strcmp(reg, "111") == 0)
     instr = "cmp";
-  } else {
+  else
     instr = "invalid";
-  }
 
   if (strcmp(mod, "00") == 0) {
     int disp = 0;
@@ -208,17 +199,13 @@ void handle_instr_immediate_reg_mem(FILE *f, char *opcode, int mov) {
       unsigned int data8h = b1 & 0xFF;
       unsigned int data16 = (data8h << 8) | data8l;
 
-      printf("%s %s [%s], %d\n", instr, w == '1' ? "word" : "byte", disp ? strdisp16 : get_rm(rm),
-             data16);
+      sprintf(result, "%s %s [%s], %d", instr, w == '1' ? "word" : "byte",
+              disp ? strdisp16 : get_rm(rm), data16);
     } else {
-      printf("%s %s [%s], %d\n", instr, w == '1' ? "word" : "byte", disp ? strdisp16 : get_rm(rm),
-             data8l);
+      sprintf(result, "%s %s [%s], %d", instr, w == '1' ? "word" : "byte",
+              disp ? strdisp16 : get_rm(rm), data8l);
     }
-
-    return;
-  }
-
-  if (strcmp(mod, "01") == 0) {
+  } else if (strcmp(mod, "01") == 0) {
     int b = fgetc(f);
     unsigned int disp8 = b & 0xFF;
     int b1 = fgetc(f);
@@ -229,17 +216,13 @@ void handle_instr_immediate_reg_mem(FILE *f, char *opcode, int mov) {
       unsigned int data8h = b2 & 0xFF;
       unsigned int data16 = (data8h << 8) | data8l;
 
-      printf("%s %s [%s + %d], %d\n", instr, w == '1' ? "word" : "byte",
-             get_rm(rm), disp8, data16);
+      sprintf(result, "%s %s [%s + %d], %d", instr, w == '1' ? "word" : "byte",
+              get_rm(rm), disp8, data16);
     } else {
-      printf("%s %s [%s + %d], %d\n", instr, w == '1' ? "word" : "byte",
-             get_rm(rm), disp8, data8l);
+      sprintf(result, "%s %s [%s + %d], %d", instr, w == '1' ? "word" : "byte",
+              get_rm(rm), disp8, data8l);
     }
-
-    return;
-  }
-
-  if (strcmp(mod, "10") == 0) {
+  } else if (strcmp(mod, "10") == 0) {
     int b = fgetc(f);
     unsigned int disp8l = b & 0xFF;
     int b1 = fgetc(f);
@@ -253,17 +236,13 @@ void handle_instr_immediate_reg_mem(FILE *f, char *opcode, int mov) {
       unsigned int data8h = b3 & 0xFF;
       unsigned int data16 = (data8h << 8) | data8l;
 
-      printf("%s %s [%s + %d], %d\n", instr, w == '1' ? "word" : "byte",
-             get_rm(rm), disp16, data16);
+      sprintf(result, "%s %s [%s + %d], %d", instr, w == '1' ? "word" : "byte",
+              get_rm(rm), disp16, data16);
     } else {
-      printf("%s %s [%s + %d], %d\n", instr, w == '1' ? "word" : "byte",
-             get_rm(rm), disp16, data8l);
+      sprintf(result, "%s %s [%s + %d], %d", instr, w == '1' ? "word" : "byte",
+              get_rm(rm), disp16, data8l);
     }
-
-    return;
-  }
-
-  if (strcmp(mod, "11") == 0) {
+  } else if (strcmp(mod, "11") == 0) {
     int b1 = fgetc(f);
     unsigned int data8l = b1 & 0xFF;
 
@@ -272,18 +251,16 @@ void handle_instr_immediate_reg_mem(FILE *f, char *opcode, int mov) {
       unsigned int data8h = b2 & 0xFF;
       unsigned int data16 = (data8h << 8) | data8l;
 
-      printf("%s %s, %d\n", instr, get_reg(rm, w), data16);
+      sprintf(result, "%s %s, %d", instr, get_reg(rm, w), data16);
     } else {
-      printf("%s %s, %d\n", instr, get_reg(rm, w), data8l);
+      sprintf(result, "%s %s, %d", instr, get_reg(rm, w), data8l);
     }
-
-    return;
   }
 }
 
-void handle_instr_mem_accumulator(FILE *f, char *opcode, char *instr) {
+void decode_instr_mem_accumulator(char *result, FILE *f, char *opcode,
+                                  char *instr) {
   char w = opcode[7], d = opcode[6];
-
   int b1 = fgetc(f);
   unsigned int data8l = b1 & 0xFF;
 
@@ -293,13 +270,13 @@ void handle_instr_mem_accumulator(FILE *f, char *opcode, char *instr) {
     unsigned int data16 = (data8h << 8) | data8l;
 
     if (d == 1)
-      printf("[%s] %s, %d\n", instr, get_reg("000", w), data16);
+      sprintf(result, "[%s] %s, %d", instr, get_reg("000", w), data16);
     else
-      printf("%s [%s], %d\n", instr, get_reg("000", w), data16);
+      sprintf(result, "%s [%s], %d", instr, get_reg("000", w), data16);
   } else {
     if (d == 1)
-      printf("[%s] %s, %d\n", instr, get_reg("000", w), data8l);
+      sprintf(result, "[%s] %s, %d", instr, get_reg("000", w), data8l);
     else
-      printf("%s [%s], %d\n", instr, get_reg("000", w), data8l);
+      sprintf(result, "%s [%s], %d", instr, get_reg("000", w), data8l);
   }
 }

@@ -65,6 +65,69 @@ char *get_rm(char *r) {
   return "";
 }
 
+int get_sim_reg_index(char *reg) {
+  if (strcmp(reg, "ax") == 0 || strcmp(reg, "ah") == 0)
+    return 0;
+
+  if (strcmp(reg, "bx") == 0 || strcmp(reg, "bh") == 0)
+    return 1;
+
+  if (strcmp(reg, "cx") == 0 || strcmp(reg, "ch") == 0)
+    return 2;
+
+  if (strcmp(reg, "dx") == 0 || strcmp(reg, "dh") == 0)
+    return 3;
+
+  if (strcmp(reg, "sp") == 0)
+    return 4;
+
+  if (strcmp(reg, "bp") == 0)
+    return 5;
+
+  if (strcmp(reg, "si") == 0)
+    return 6;
+
+  if (strcmp(reg, "di") == 0)
+    return 7;
+
+  return -1;
+}
+
+char *get_sim_reg_name(int reg, int low) {
+  switch (reg) {
+  case 0:
+    if (low)
+      return "ah";
+    else
+      return "ax";
+  case 1:
+    if (low)
+      return "bh";
+    else
+      return "bx";
+  case 2:
+    if (low)
+      return "ch";
+    else
+      return "cx";
+  case 3:
+    if (low)
+      return "dh";
+    else
+      return "dx";
+  case 4:
+    return "sp";
+  case 5:
+    return "bp";
+  case 6:
+    return "si";
+  case 7:
+    return "di";
+  }
+
+  return "";
+}
+
 void read_opcode(char *opcode, int byte) {
   for (int i = 0; i <= 7; ++i) {
     int b = byte & (1 << i);
