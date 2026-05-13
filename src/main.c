@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
   fseek(f, 0L, SEEK_END);
 
   long size = ftell(f);
-  int fi = 0;
+  int fi = 0, zero_flag = 0, signed_flag = 0;
   char *instr = (char *)malloc(sizeof(char) * 100);
   char *oper = (char *)malloc(sizeof(char) * 100);
 
@@ -134,7 +134,7 @@ int main(int argc, char **argv) {
     else
       break;
 
-    simulate(oper, registers, instr);
+    simulate(oper, registers, &zero_flag, &signed_flag, instr);
     printf("%s ; %s\n", instr, oper);
   }
 
@@ -144,7 +144,10 @@ int main(int argc, char **argv) {
   printf("\n");
 
   for (int i = 0; i <= 7; ++i)
-    printf("%s: 0x%04x (%d)\n", get_sim_reg_name(i, 0), registers[i], registers[i]);
-  
+    printf("%s: 0x%04x (%d)\n", get_sim_reg_name(i, 0),
+           (unsigned short)registers[i], (unsigned short)registers[i]);
+
+  printf("flags: Z = %d, S = %d\n", zero_flag, signed_flag);
+
   return 0;
 }
