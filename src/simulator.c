@@ -5,7 +5,7 @@
 
 #include "utils.h"
 
-void simulate(char *oper, int16_t registers[8], int *zero_flag,
+void simulate(char *oper, int16_t registers[8], int *ip, int *zero_flag,
               int *signed_flag, char *instr) {
   char kind[10], operand1[10], operand2[10];
   int16_t value;
@@ -14,6 +14,13 @@ void simulate(char *oper, int16_t registers[8], int *zero_flag,
 
   int dest_index = get_sim_reg_index(operand1);
   int source_index = get_sim_reg_index(operand2);
+
+  if (strcmp(kind, "jnz") == 0 && *zero_flag == 0) {
+    value = (int16_t)atoi(operand1);
+    *ip += (int)value;
+
+    return;
+  }
 
   if (source_index == -1)
     value = (int16_t)atoi(operand2);
@@ -38,13 +45,13 @@ void simulate(char *oper, int16_t registers[8], int *zero_flag,
       *signed_flag = 0;
   }
 
-  if (strcmp(kind, "cmp") != 0)
-    sprintf(oper, "%s: 0x%04x -> 0x%04x, Z = %d, S = %d",
+  if (strcmp(kind, "cmp") != 0 && strcmp(kind, "jnz") != 0)
+    sprintf(oper, "%s: 0x%04x -> 0x%04x, IP = 0x%04x, Z = %d, S = %d",
             get_sim_reg_name(dest_index, 0),
-            (unsigned short)registers[dest_index], (unsigned short)value,
+            (unsigned short)registers[dest_index], (unsigned short)value, *ip,
             *zero_flag, *signed_flag);
   else
-    sprintf(oper, "Z = %d, S = %d", *zero_flag, *signed_flag);
+    sprintf(oper, "IP = 0x%04x, Z = %d, S = %d", *ip, *zero_flag, *signed_flag);
 
   if (strcmp(kind, "cmp") != 0)
     registers[dest_index] = value;

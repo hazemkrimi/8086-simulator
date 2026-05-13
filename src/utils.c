@@ -134,3 +134,7 @@ void read_opcode(char *opcode, int byte) {
     opcode[abs(i - 7)] = binary_to_char(b);
   }
 }
+
+int next_byte(char * buf, int *ip) {
+  return buf[(*ip)++];
+}
