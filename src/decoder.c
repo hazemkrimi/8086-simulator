@@ -12,7 +12,8 @@ void decode_jmp_instr(char *result, char *buf, int *ip, char *instr) {
   sprintf(result, "%s %d", instr, inc);
 }
 
-void decode_instr_reg_mem(char *result, char *buf, int *ip, char *opcode, char *instr) {
+void decode_instr_reg_mem(char *result, char *buf, int *ip, char *opcode,
+                          char *instr) {
   char mod[3], reg[4], rm[4];
   char d = opcode[6], w = opcode[7];
   int c = next_byte(buf, ip);
@@ -57,10 +58,10 @@ void decode_instr_reg_mem(char *result, char *buf, int *ip, char *opcode, char *
     }
 
     if (d == '1') {
-      sprintf(result, "%s %s, [%s]", instr, get_reg(reg, w),
-              disp ? strdisp16 : get_rm(rm));
+      sprintf(result, "%s %s, %s [%s]", instr, get_reg(reg, w),
+              w == '1' ? "word" : "byte", disp ? strdisp16 : get_rm(rm));
     } else {
-      sprintf(result, "%s [%s], %s", instr, disp ? strdisp16 : get_rm(rm),
+      sprintf(result, "%s %s [%s], %s", instr, w == '1' ? "word" : "byte", disp ? strdisp16 : get_rm(rm),
               get_reg(reg, w));
     }
   } else if (strcmp(mod, "01") == 0) {
@@ -69,8 +70,8 @@ void decode_instr_reg_mem(char *result, char *buf, int *ip, char *opcode, char *
 
     if (d == '1') {
       if (disp8)
-        sprintf(result, "%s %s, [%s + %d]", instr, get_reg(reg, w),
-                get_rm(rm), disp8);
+        sprintf(result, "%s %s, [%s + %d]", instr, get_reg(reg, w), get_rm(rm),
+                disp8);
       else
         sprintf(result, "%s %s, [%s]", instr, get_reg(reg, w), get_rm(rm));
     } else {
@@ -89,8 +90,8 @@ void decode_instr_reg_mem(char *result, char *buf, int *ip, char *opcode, char *
 
     if (d == '1') {
       if (disp16)
-        sprintf(result, "%s %s, [%s + %d]", instr, get_reg(reg, w),
-                get_rm(rm), disp16);
+        sprintf(result, "%s %s, [%s + %d]", instr, get_reg(reg, w), get_rm(rm),
+                disp16);
       else
         sprintf(result, "%s %s, [%s]", instr, get_reg(reg, w), get_rm(rm));
     } else {
@@ -109,8 +110,8 @@ void decode_instr_reg_mem(char *result, char *buf, int *ip, char *opcode, char *
   }
 }
 
-void decode_instr_immediate_reg_acc(char *result, char *buf, int *ip, char *opcode,
-                                    char *instr) {
+void decode_instr_immediate_reg_acc(char *result, char *buf, int *ip,
+                                    char *opcode, char *instr) {
   char w, reg[4];
 
   if (strcmp(instr, "mov") == 0) {
@@ -136,8 +137,8 @@ void decode_instr_immediate_reg_acc(char *result, char *buf, int *ip, char *opco
   }
 }
 
-void decode_instr_immediate_reg_mem(char *result, char *buf, int *ip, char *opcode,
-                                    int mov) {
+void decode_instr_immediate_reg_mem(char *result, char *buf, int *ip,
+                                    char *opcode, int mov) {
   char mod[3], reg[4], rm[4], *instr;
   char s = opcode[6], w = opcode[7];
   int c = next_byte(buf, ip);
@@ -259,8 +260,8 @@ void decode_instr_immediate_reg_mem(char *result, char *buf, int *ip, char *opco
   }
 }
 
-void decode_instr_mem_accumulator(char *result, char *buf, int *ip, char *opcode,
-                                  char *instr) {
+void decode_instr_mem_accumulator(char *result, char *buf, int *ip,
+                                  char *opcode, char *instr) {
   char w = opcode[7], d = opcode[6];
   int b1 = next_byte(buf, ip);
   unsigned int data8l = b1 & 0xFF;

@@ -7,5 +7,6 @@ char *get_sim_reg_name(int, int);
 char binary_to_char(int);
 int get_sim_reg_index(char *);
 int next_byte(char *, int *);
+int isnumber(char *);
 
 #endif

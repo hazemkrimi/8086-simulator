@@ -1,6 +1,15 @@
 #include "utils.h"
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+
+int isnumber(char *str) {
+  for (int i = 0; i < (int)strlen(str); ++i) {
+    if (!isdigit(str[i])) return 0;
+  }
+
+  return 1;
+}
 
 char binary_to_char(int n) {
   if (n)

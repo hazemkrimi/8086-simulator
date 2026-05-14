@@ -5,15 +5,106 @@
 
 #include "utils.h"
 
-void simulate(char *oper, int16_t registers[8], int16_t memory[65536], int *ip,
+enum storage_type { REGISTER, MEMORY, IMMEDIATE };
+
+struct storage {
+  enum storage_type type;
+  int value;
+  int size;
+};
+
+int get_location(int16_t registers[8], char *eval) {
+  if (isnumber(eval))
+    return atoi(eval);
+
+  if (strstr(eval, "+")) {
+    char opone[10], optwo[10];
+
+    sscanf(eval, "%s + %s", opone, optwo);
+
+    return get_location(registers, opone) + get_location(registers, optwo);
+  } else {
+    int index = get_sim_reg_index(eval);
+
+    if (index != -1)
+      return registers[index];
+  }
+
+  return -1;
+}
+
+struct storage get_dest(int16_t registers[8], char *dest) {
+  struct storage s;
+  int index;
+
+  index = get_sim_reg_index(dest);
+
+  if (index != -1) {
+    s.type = REGISTER;
+    s.value = index;
+
+    return s;
+  }
+
+  char location[30];
+  int size;
+
+  if (strstr(dest, "word") != NULL) {
+    size = 16;
+
+    sscanf(dest, "word [%[^]]]", location);
+  }
+
+  if (strstr(dest, "byte") != NULL) {
+    size = 8;
+
+    sscanf(dest, "byte [%[^]]]", location);
+  }
+
+  index = get_location(registers, location);
+
+  if (index == -1) {
+    s.type = MEMORY;
+    s.value = -1;
+    s.size = size;
+
+    return s;
+  }
+
+  s.type = MEMORY;
+  s.value = index;
+  s.size = size;
+
+  return s;
+}
+
+struct storage get_source(int16_t registers[8], char *source) {
+  if (isnumber(source)) {
+    struct storage s;
+
+    s.type = IMMEDIATE;
+    s.value = atoi(source);
+
+    return s;
+  }
+
+  return get_dest(registers, source);
+}
+
+void simulate(char *oper, int16_t registers[8], int8_t memory[65536], int *ip,
               int *zero_flag, int *signed_flag, char *instr) {
-  char kind[10], operand1[10], operand2[10];
+  char kind[10], operand1[20], operand2[20];
   int16_t value;
 
-  sscanf(instr, "%s %[^,], %s", kind, operand1, operand2);
+  sscanf(instr, "%s %[^,], %[^\n]", kind, operand1, operand2);
 
-  int dest_index = get_sim_reg_index(operand1);
-  int source_index = get_sim_reg_index(operand2);
+  struct storage dest = get_dest(registers, operand1);
+  struct storage source = get_source(registers, operand2);
+
+  if (source.value < 0 || (strcmp(kind, "jnz") != 0 && dest.value < 0)) {
+    printf("ERROR: incorrect parsing of instruction source and destination\n");
+    exit(1);
+  }
 
   if (strcmp(kind, "jnz") == 0 && *zero_flag == 0) {
     value = (int16_t)atoi(operand1);
@@ -22,16 +113,28 @@ void simulate(char *oper, int16_t registers[8], int16_t memory[65536], int *ip,
     return;
   }
 
-  if (source_index == -1)
-    value = (int16_t)atoi(operand2);
-  else
-    value = registers[source_index];
+  switch (source.type) {
+  case IMMEDIATE:
+    value = source.value;
+    break;
+  case REGISTER:
+    value = registers[source.value];
+    break;
+  case MEMORY:
+    if (source.size == 16)
+      value =
+          (memory[source.value] & 0x00FF) | (memory[source.value + 1] & 0xFF00);
+    else
+      value = memory[source.value];
+  }
 
-  if (strcmp(kind, "add") == 0)
-    value += registers[dest_index];
+  if (strcmp(kind, "add") == 0) {
+    value += registers[dest.value];
+  }
 
-  if (strcmp(kind, "sub") == 0 || strcmp(kind, "cmp") == 0)
-    value = registers[dest_index] - value;
+  if (strcmp(kind, "sub") == 0 || strcmp(kind, "cmp") == 0) {
+    value = registers[dest.value] - value;
+  }
 
   if (strcmp(kind, "mov") != 0) {
     if (!value)
@@ -45,14 +148,25 @@ void simulate(char *oper, int16_t registers[8], int16_t memory[65536], int *ip,
       *signed_flag = 0;
   }
 
-  if (strcmp(kind, "cmp") != 0 && strcmp(kind, "jnz") != 0)
-    sprintf(oper, "%s: 0x%04x -> 0x%04x, IP = 0x%04x, Z = %d, S = %d",
-            get_sim_reg_name(dest_index, 0),
-            (unsigned short)registers[dest_index], (unsigned short)value, *ip,
-            *zero_flag, *signed_flag);
-  else
-    sprintf(oper, "IP = 0x%04x, Z = %d, S = %d", *ip, *zero_flag, *signed_flag);
+  char reg_update[20];
 
-  if (strcmp(kind, "cmp") != 0)
-    registers[dest_index] = value;
+  if (dest.type == REGISTER)
+    sprintf(reg_update, "%s: 0x%04x -> 0x%04x", get_sim_reg_name(dest.value, 0), registers[dest.value], value);
+
+  sprintf(oper, "%s IP = 0x%04x, Z = %d, S = %d", reg_update, *ip, *zero_flag, *signed_flag);
+
+  if (strcmp(kind, "add") == 0 || strcmp(kind, "sub") == 0)
+    registers[dest.value] = value;
+  else if (strcmp(kind, "mov") == 0) {
+    if (dest.type == REGISTER)
+      registers[dest.value] = value;
+    else {
+      if (dest.size == 8)
+        memory[dest.value] = (int8_t)(value & 0x00FF);
+      else {
+        memory[dest.value] = (int8_t)(value & 0x00FF);
+        memory[dest.value + 1] = (int8_t)(value & 0xFF00);
+      }
+    }
+  }
 }

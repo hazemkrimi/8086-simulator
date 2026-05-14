@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
   fclose(f);
 
   int16_t registers[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-  int16_t memory[65536];
+  int8_t memory[65536];
 
   for (int i = 0; i < 65536; ++i)
     memory[i] = 0;
