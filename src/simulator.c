@@ -17,7 +17,7 @@ int get_location(int16_t registers[8], char *eval) {
   if (isnumber(eval))
     return atoi(eval);
 
-  if (strstr(eval, "+")) {
+  if (strstr(eval, "+") != NULL) {
     char opone[10], optwo[10];
 
     sscanf(eval, "%s + %s", opone, optwo);
@@ -53,12 +53,14 @@ struct storage get_dest(int16_t registers[8], char *dest) {
     size = 16;
 
     sscanf(dest, "word [%[^]]]", location);
-  }
-
-  if (strstr(dest, "byte") != NULL) {
+  } else if (strstr(dest, "byte") != NULL) {
     size = 8;
 
     sscanf(dest, "byte [%[^]]]", location);
+  } else if (strstr(dest, "[") != NULL) {
+    size = 16;
+
+    sscanf(dest, "[%[^]]]", location);
   }
 
   index = get_location(registers, location);
@@ -103,6 +105,7 @@ void simulate(char *oper, int16_t registers[8], int8_t memory[65536], int *ip,
 
   if (source.value < 0 || (strcmp(kind, "jnz") != 0 && dest.value < 0)) {
     printf("ERROR: incorrect parsing of instruction source and destination\n");
+    printf("LOG: \"%s\", %d, %d\n", instr, dest.value, source.value);
     exit(1);
   }
 
@@ -122,18 +125,29 @@ void simulate(char *oper, int16_t registers[8], int8_t memory[65536], int *ip,
     break;
   case MEMORY:
     if (source.size == 16)
-      value =
-          (memory[source.value] & 0x00FF) | (memory[source.value + 1] & 0xFF00);
+      value = memory[source.value] | memory[source.value + 1];
     else
       value = memory[source.value];
   }
 
   if (strcmp(kind, "add") == 0) {
-    value += registers[dest.value];
+    if (dest.type == REGISTER)
+      value = registers[dest.value] + value;
+    else if (dest.size == 8)
+      value = memory[dest.value] + (value & 0x00FF);
+    else {
+      value = (memory[source.value] | memory[source.value + 1]) + value;
+    }
   }
 
   if (strcmp(kind, "sub") == 0 || strcmp(kind, "cmp") == 0) {
-    value = registers[dest.value] - value;
+    if (dest.type == REGISTER)
+      value = registers[dest.value] - value;
+    else if (dest.size == 8)
+      value = memory[dest.value] - (value & 0x00FF);
+    else {
+      value = (memory[dest.value] | memory[dest.value + 1]) - value;
+    }
   }
 
   if (strcmp(kind, "mov") != 0) {
@@ -151,13 +165,13 @@ void simulate(char *oper, int16_t registers[8], int8_t memory[65536], int *ip,
   char reg_update[20];
 
   if (dest.type == REGISTER)
-    sprintf(reg_update, "%s: 0x%04x -> 0x%04x", get_sim_reg_name(dest.value, 0), registers[dest.value], value);
+    sprintf(reg_update, "%s: 0x%04x -> 0x%04x", get_sim_reg_name(dest.value, 0),
+            registers[dest.value], value);
 
-  sprintf(oper, "%s IP = 0x%04x, Z = %d, S = %d", reg_update, *ip, *zero_flag, *signed_flag);
+  sprintf(oper, "%s IP = 0x%04x, Z = %d, S = %d", reg_update, *ip, *zero_flag,
+          *signed_flag);
 
-  if (strcmp(kind, "add") == 0 || strcmp(kind, "sub") == 0)
-    registers[dest.value] = value;
-  else if (strcmp(kind, "mov") == 0) {
+  if (strcmp(kind, "cmp") != 0) {
     if (dest.type == REGISTER)
       registers[dest.value] = value;
     else {

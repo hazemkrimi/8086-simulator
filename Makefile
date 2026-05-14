@@ -1,6 +1,6 @@
 CC = gcc
 TARGET_NAME = simulator
-CFLAGS = -g -Wall -Wextra -DDEBUG
+CFLAGS = -g -Wall -Wextra -DDEBUG -fno-stack-protector
 OUT_DIR = out
 TARGET = $(OUT_DIR)/$(TARGET_NAME)
 
