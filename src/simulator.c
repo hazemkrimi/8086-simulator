@@ -3,9 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "types.h"
 #include "utils.h"
-
-enum storage_type { REGISTER, MEMORY, IMMEDIATE };
 
 struct storage {
   enum storage_type type;
@@ -13,7 +12,7 @@ struct storage {
   int size;
 };
 
-int get_location(int16_t registers[8], char *eval) {
+static int get_location(int16_t registers[8], char *eval) {
   if (isnumber(eval))
     return atoi(eval);
 
@@ -33,7 +32,7 @@ int get_location(int16_t registers[8], char *eval) {
   return -1;
 }
 
-struct storage get_dest(int16_t registers[8], char *dest) {
+static struct storage get_dest(int16_t registers[8], char *dest) {
   struct storage s;
   int index;
 
@@ -80,7 +79,7 @@ struct storage get_dest(int16_t registers[8], char *dest) {
   return s;
 }
 
-struct storage get_source(int16_t registers[8], char *source) {
+static struct storage get_source(int16_t registers[8], char *source) {
   if (isnumber(source)) {
     struct storage s;
 
@@ -105,7 +104,6 @@ void simulate(char *oper, int16_t registers[8], int8_t memory[65536], int *ip,
 
   if (source.value < 0 || (strcmp(kind, "jnz") != 0 && dest.value < 0)) {
     printf("ERROR: incorrect parsing of instruction source and destination\n");
-    printf("LOG: \"%s\", %d, %d\n", instr, dest.value, source.value);
     exit(1);
   }
 

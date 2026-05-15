@@ -5,6 +5,7 @@
 
 #include "decoder.h"
 #include "simulator.h"
+#include "performance.h"
 #include "utils.h"
 
 int main(int argc, char **argv) {
@@ -23,11 +24,12 @@ int main(int argc, char **argv) {
   fseek(f, 0L, SEEK_END);
 
   long length = ftell(f);
-  int ip = 0, zero_flag = 0, signed_flag = 0;
+  int clocks = 0, ip = 0, zero_flag = 0, signed_flag = 0;
 
   char *buf = (char *)malloc(sizeof(char) * length);
   char *instr = (char *)malloc(sizeof(char) * 100);
   char *oper = (char *)malloc(sizeof(char) * 100);
+  char *estimation = (char *)malloc(sizeof(char) * 100);
 
   rewind(f);
   fread(buf, 1, length, f);
@@ -140,7 +142,8 @@ int main(int argc, char **argv) {
       decode_jmp_instr(instr, buf, &ip, "jcxz");
 
     simulate(oper, registers, memory, &ip, &zero_flag, &signed_flag, instr);
-    printf("%s ; %s\n", instr, oper);
+    estimate(estimation, &clocks, instr);
+    printf("%s ; %s | %s\n", instr, estimation, oper);
   }
 
   free(instr);
